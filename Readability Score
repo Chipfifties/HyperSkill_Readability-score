@@ -1,0 +1,112 @@
+package readability;
+
+import java.io.IOException;
+import java.nio.file.*;
+import java.util.Scanner;
+
+public class Main {
+    static int sentenceCounter;
+    static int wordCounter;
+    static int charCounter;
+    static int sylCounter = 0;
+    static int polySylCounter = 0;
+    static double ariScore;
+    static double fkrIndex;
+    static double smogIndex;
+    static double clIndex;
+    static final String VOWELS = "[aeiouy]";
+    static final String[] indexArray = {"6", "7", "9", "10", "11", "12", "13", "14", "15",
+            "16", "17", "18", "24", "24"};
+
+
+    public static void main(String[] args) throws IOException {
+        // Reading input file
+        String input = new String(Files.readAllBytes(Path.of(args[0])));
+        String[] wordArray = input.replaceAll("[.,!?]", "").toLowerCase().split(" ");
+        // Counting words, characters, sentences, syllables, polysyllables and indexes
+        counters(input, wordArray);
+        // Output
+        System.out.println("The text is:");
+        System.out.println(input);
+        System.out.println("Words: " + wordCounter);
+        System.out.println("Sentences: " + sentenceCounter);
+        System.out.println("Characters: " + charCounter);
+        System.out.println("Syllables: " + sylCounter);
+        System.out.println("Polysyllables: " + polySylCounter);
+        System.out.print("Enter the score you want to calculate (ARI, FK, SMOG, CL, all): ");
+        String choice = new Scanner(System.in).next();
+        System.out.println();
+        // Result output
+        result(choice);
+    }
+
+    static void counters(String input, String[] wordArray) {
+        sentenceCounter = input.split("[.!?]").length;
+        wordCounter = input.replaceAll("[,.\\n\\t]", "").split(" ").length;
+        charCounter = input.replaceAll("\\s", "").length();
+
+        // Syllables and Polysyllables counters
+        for(String value : wordArray) {
+            int perWordCounter = 0;
+            char[] chars = value.toCharArray();
+            for (int i = 0, y = 1; i < value.length(); i++, y++) {
+                if (y < value.length() && Character.toString(chars[i]).matches(VOWELS)
+                        && Character.toString(chars[y]).matches(VOWELS)) {
+                    continue;
+                }
+                if (Character.toString(chars[i]).matches(VOWELS)) {
+                    perWordCounter++;
+                }
+            }
+            if (value.charAt(value.length() - 1) == 'e') {
+                perWordCounter--;
+            }
+            if (perWordCounter <= 0) perWordCounter = 1;
+            if (perWordCounter > 2) polySylCounter++;
+            sylCounter += perWordCounter;
+        }
+        // Sending counters to method with index calculations
+        indexCalc(wordCounter, charCounter, sentenceCounter, sylCounter, polySylCounter);
+    }
+    // Calculating all the scores
+    static void indexCalc(int words, int chars, int sentences, double syllables, double polySyllables) {
+        ariScore = (4.71 * chars / words) + (0.5 * words / sentences) - 21.43;
+        fkrIndex = (0.39 * ((double) words / sentences) + 11.8 * (syllables / words) - 15.59);
+        smogIndex = 1.043 * Math.sqrt(polySyllables * ((double) 30 / sentences)) + 3.1291;
+        clIndex = 0.0588 * ((double) chars / words * 100) - 0.296 * ((double) sentences / words * 100) - 15.8;
+    }
+
+    static void result(String choice) {
+        // Age calculating
+        int ariAge = Math.ceil(ariScore) <= 13 ? Integer.parseInt(indexArray[(int) Math.floor(ariScore) - 1]) : 24;
+        int frkAGE = Math.ceil(fkrIndex) <=13 ? Integer.parseInt(indexArray[(int) Math.floor(fkrIndex) - 1]) : 24;
+        int smogAge = Math.ceil(smogIndex) <=13 ? Integer.parseInt(indexArray[(int) Math.floor(smogIndex) - 1]) : 24;
+        int clAge = Math.ceil(clIndex) <= 13 ? Integer.parseInt(indexArray[(int) Math.floor(clIndex) - 1]) : 24;
+
+        // Final output
+        switch (choice) {
+            case "ARI":
+                System.out.printf("Automated Readability Index: %.2f (about %d year olds).\n", ariScore, ariAge);
+                break;
+            case "FK":
+                System.out.printf("Flesch–Kincaid readability tests: %.2f (about %d year olds).\n", fkrIndex, frkAGE);
+                break;
+            case "SMOG":
+                System.out.printf("Simple Measure of Gobbledygook: %.2f (about %d year olds).\n", smogIndex, smogAge);
+                break;
+            case "CL":
+                System.out.printf("Coleman–Liau index: %.2f (about %d year olds).\n", clIndex, clAge);
+                break;
+            case "all":
+                System.out.printf("Automated Readability Index: %.2f (about %d year olds).\n", ariScore, ariAge);
+                System.out.printf("Flesch–Kincaid readability tests: %.2f (about %d year olds).\n", fkrIndex, frkAGE);
+                System.out.printf("Simple Measure of Gobbledygook: %.2f (about %d year olds).\n", smogIndex, smogAge);
+                System.out.printf("Coleman–Liau index: %.2f (about %d year olds).\n", clIndex, clAge);
+                break;
+        }
+
+        double average = (double) (ariAge + frkAGE + smogAge + clAge) / 4;
+        System.out.printf("\nThis text should be understood in average by %.2f year olds.", average);
+    }
+
+}
